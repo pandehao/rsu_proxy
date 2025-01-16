@@ -2,6 +2,7 @@
 
 import socket
 import threading
+from handlers.v2x_message_handler import v2x_message_handler as send
 
 class V2XServer(threading.Thread):
     """
