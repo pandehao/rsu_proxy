@@ -2,8 +2,8 @@
 
 import socket
 import threading
-from handlers.v2x_message_handler import v2x_message_handler as v2x_handler
-from handlers.v2x_message_send import v2x_message_send as send
+from handlers.v2x_message_handler import V2XMessageHandler
+from handlers.v2x_message_handler import V2XMessageSendTest
 
 class V2XServer(threading.Thread):
     """
@@ -24,7 +24,9 @@ class V2XServer(threading.Thread):
 
     def run(self):
         try:
-            v2x_handler().v2x_message_send_test().send_test()
+            test_sender = V2XMessageSendTest()
+            test_sender.__init__()
+            test_sender.send_test()
         except Exception as e:
             print(f"[V2X] 发送出错: {e}")
 

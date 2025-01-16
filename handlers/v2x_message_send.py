@@ -7,8 +7,8 @@ SERVER_IP = "192.168.253.20"
 V2X_MESSAGE_HEADER_SIZE = 40  # 增加两个字段后的头部大小
 MAX_UDP_PAYLOAD = 1024  # 假设MTU为1024字节
 
-class v2x_message_send():
-    def message_send(message,_message_type,_v2xVehicleID):
+class V2XMessageSend():
+    def message_send(self,message,_message_type,_v2xVehicleID):
         # 创建UDP套接字
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             # 设置服务器地址
@@ -73,4 +73,3 @@ class v2x_message_send():
                 #time.sleep(0.1)  # 等待一小段时间，可能有助于处理网络拥塞
 
 
-#车辆ID BSM可以开 

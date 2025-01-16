@@ -1,20 +1,28 @@
 import json
+import logging
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from handlers.v2x_message_send import v2x_message_send as send
+from handlers.v2x_message_send import V2XMessageSend  # 假设此类存在并提供 message_send 方法
 
-#定义常量
-_img_pull = 0x0001
-_function_curl = 0x0002
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# 定义常量
+IMG_PULL = 0x0001
+FUNCTION_CURL = 0x0002
+
+# 定义数据字典
 img_pull = {
-    "image_name":"test",
-    "image_version":"latest",
-    "image_url":"crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/test"
+    "image_name": "test",
+    "image_version": "latest",
+    "image_url": "crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/test"
 }
+
 img_pull_plate_ocr = {
-    "image_name":"plate-ocr",
-    "image_version":"latest",
-    "image_url":"crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/plate-ocr",
+    "image_name": "plate-ocr",
+    "image_version": "latest",
+    "image_url": "crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/plate-ocr",
 }
 
 function_curl = {
@@ -28,83 +36,79 @@ function_curl = {
 function_curl_plate_ocr = {
     "function_name": "plate-ocr",
     "function_url": "http://127.0.0.1:31112/function/plate-ocr",
-    "-d": "img_url",
-        "image_version1":"crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/plate-ocr"
+    "-d": {
+        "img_url": "crpi-grt1fsn10pyzvqfg.cn-hangzhou.personal.cr.aliyuncs.com/faas-node/plate-ocr"
+    }
 }
 
-class v2x_message_handler():
-    class RequestHandler(BaseHTTPRequestHandler):
-        #处理收到的v2x消息
-        def do_POST(self):
-            # 获取请求头中的内容长度
-            content_length = int(self.headers['Content-Length'])
-            # 读取 POST 数据
-            post_data = self.rfile.read(content_length)
+class V2XMessageHandler(BaseHTTPRequestHandler):
+    """
+    HTTP 请求处理器，处理接收到的 CV2X 消息。
+    """
 
-            # 尝试解析 JSON 数据
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                #print("Received JSON data:", json.dumps(data, indent=4))
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                # 回传 JSON 响应
-                response = {'status': 'success', 'message': 'Data received'}
-                self.wfile.write(json.dumps(response).encode('utf-8'))          
-            except json.JSONDecodeError:
-                self.send_response(400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                response = {'status': 'error', 'message': 'Invalid JSON'}
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-            
+    def do_POST(self):
+        # 获取请求头中的内容长度
+        content_length = int(self.headers.get('Content-Length', 0))
+        # 读取 POST 数据
+        post_data = self.rfile.read(content_length)
 
-            # 将 POST 数据解码为字符串并解析为 JSON 对象
+        # 尝试解析 JSON 数据
+        try:
             data = json.loads(post_data.decode('utf-8'))
+            logging.info(f"Received JSON data: {json.dumps(data, indent=4)}")
+            # 发送成功响应
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            response = {'status': 'success', 'message': 'Data received'}
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+        except json.JSONDecodeError:
+            logging.error("Invalid JSON received")
+            # 发送错误响应
+            self.send_response(400)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            response = {'status': 'error', 'message': 'Invalid JSON'}
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            return  # 解析失败，提前退出
 
-            # 访问 JSON 数据中的字段
-            next_function_name = data.get("next_function_name", None)
-            paragram_url = data.get("paragram_url", None)
-            paragram = data.get("paragram", None)
+        # 处理消息
+        next_function_name = data.get("next_function_name")
+        paragram_url = data.get("paragram_url")
+        paragram = data.get("paragram")
 
-            print(f"Next Function Name: {next_function_name}")
-            print(f"Paragram URL: {paragram_url}")
-            print(f"Paragram: {paragram}")
+        logging.info(f"Next Function Name: {next_function_name}")
+        logging.info(f"Paragram URL: {paragram_url}")
+        logging.info(f"Paragram: {paragram}")
 
-            if next_function_name == "plate-ocr" :
-                message_json = {
-                    "function_name": "plate-ocr",
-                    "function_url": "http://127.0.0.1:31112/function/plate-ocr",
-                    "-d": paragram_url + "/" + paragram
+        if next_function_name == "plate-ocr" and paragram_url and paragram:
+            message_json = {
+                "function_name": "plate-ocr",
+                "function_url": "http://127.0.0.1:31112/function/plate-ocr",
+                "-d": {
+                    "img_url": f"{paragram_url}/{paragram}"
                 }
-            
-            message = json.dumps(message_json)
-            message = message.encode('ascii')
-            print(message)
+            }
+            message = json.dumps(message_json).encode('ascii')
+            logging.info(f"Prepared message: {message}")
+
             v2xVehicleID = 0x30A2105E
-            send.message_send(message,_function_curl,v2xVehicleID)
-    
-    class v2x_message_send_test():
-        #v2x消息发送测试
-        def send_test(self):
-            message = json.dumps(function_curl_plate_ocr)
-            message = message.encode('ascii')
-            while 1:
-                v2xVehicleID = 0x30A2105E
-                send.message_send(message,_function_curl,v2xVehicleID)
+            # 发送消息
+            V2XMessageSend.message_send(message, FUNCTION_CURL, v2xVehicleID)
+        else:
+            logging.warning("Missing parameters or unsupported function_name")
 
-#while 1:
-#    v2xVehicleID = 0x30A2105E
-#    send.message_send(message,_function_curl,v2xVehicleID)
+class V2XMessageSendTest():
+    """
+    类用于发送测试 CV2X 消息。
+    """
 
-# 运行 HTTP 服务器
-#def run(server_class=HTTPServer, handler_class=RequestHandler, port=7966):
-#    server_address = ('', port)
-#    httpd = server_class(server_address, handler_class)
-#    print(f"Server running on port {port}...")
-#    httpd.serve_forever()
-    
+    def __init__(self):
+        self.sender = V2XMessageSend()
 
-#
-
-
+    def send_test(self):
+        message = json.dumps(function_curl_plate_ocr).encode('ascii')
+        while True:
+            v2xVehicleID = 0x30A2105E
+            self.sender.message_send(message, FUNCTION_CURL, v2xVehicleID)
+            time.sleep(5)  # 每5秒发送一次测试消息
