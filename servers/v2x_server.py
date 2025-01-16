@@ -2,7 +2,8 @@
 
 import socket
 import threading
-from handlers.v2x_message_handler import v2x_message_handler as send
+from handlers.v2x_message_handler import v2x_message_handler as v2x_handler
+from handlers.v2x_message_send import v2x_message_send as send
 
 class V2XServer(threading.Thread):
     """
@@ -22,6 +23,11 @@ class V2XServer(threading.Thread):
         print(f"V2X代理服务器启动在 {self.host}:{self.port}")
 
     def run(self):
+        try:
+            v2x_handler().v2x_message_send_test().send_test()
+        except Exception as e:
+            print(f"[V2X] 发送出错: {e}")
+
         while True:
             try:
                 client_socket, client_address = self.server_socket.accept()
