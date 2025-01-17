@@ -2,8 +2,14 @@
 
 import socket
 import threading
+import logging
 from handlers.v2x_message_handler import V2XMessageHandler
 from handlers.v2x_message_handler import V2XMessageSendTest
+from handlers.v2x_message_handler import V2XMessageListen
+
+
+#配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class V2XServer(threading.Thread):
     """
@@ -20,30 +26,36 @@ class V2XServer(threading.Thread):
         self.server_socket.bind((self.host, self.port))
         # 监听传入的连接
         self.server_socket.listen(5)
-        print(f"V2X代理服务器启动在 {self.host}:{self.port}")
+        logging.info(f"V2X代理服务器启动在 {self.host}:{self.port}")
 
     def run(self):
         try:
-            test_sender = V2XMessageSendTest()
-            test_sender.__init__()
-            test_sender.send_test()
+            # 运行 V2X 监听服务
+            V2XMessageListen.listen_v2x_port()
         except Exception as e:
-            print(f"[V2X] 发送出错: {e}")
+            logging.info(f"[V2X] 监听服务出错: {e}")
+
+        # try:
+        #     test_sender = V2XMessageSendTest()
+        #     test_sender.__init__()
+        #     test_sender.send_test()
+        # except Exception as e:
+        #     print(f"[V2X] 发送出错: {e}")
 
         while True:
             try:
                 client_socket, client_address = self.server_socket.accept()
-                print(f"[V2X] 来自 {client_address} 的连接")
+                logging.info(f"[V2X] 来自 {client_address} 的连接")
                 # 使用新的线程处理客户端连接
                 threading.Thread(target=self.handle_client, args=(client_socket, client_address)).start()
             except Exception as e:
-                print(f"[V2X] 连接处理出错: {e}")
+                logging.info(f"[V2X] 连接处理出错: {e}")
 
     def handle_client(self, client_socket, client_address):
         try:
             # 接收来自客户端的请求
             request = client_socket.recv(1024)
-            print(f"[V2X] 收到请求: {request}")
+            logging.info(f"[V2X] 收到请求: {request}")
             # 构建响应
             response = (
                 "HTTP/1.1 200 OK\r\n"
@@ -55,7 +67,7 @@ class V2XServer(threading.Thread):
             # 发送响应回客户端
             client_socket.sendall(response.encode('utf-8'))
         except Exception as e:
-            print(f"[V2X] 处理客户端出错: {e}")
+            logging.info(f"[V2X] 处理客户端出错: {e}")
         finally:
             # 关闭客户端连接
             client_socket.close()

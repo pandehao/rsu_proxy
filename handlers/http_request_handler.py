@@ -1,10 +1,14 @@
 # rsu_proxy/handlers/http_request_handler.py
 
 import os
+import logging
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from cgi import FieldStorage
 from utils.directory_utils import SAFE_DIRECTORY
+
+#配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     """
@@ -106,7 +110,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(response_message.encode('utf-8'))
-                print(f"[HTTP] File saved: {save_path}")
+                logging.info(f"[HTTP] File saved: {save_path}")
             else:
                 self.send_error(400, "File upload failed.")
         except Exception as e:

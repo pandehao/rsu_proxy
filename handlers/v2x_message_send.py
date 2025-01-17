@@ -1,6 +1,10 @@
 import socket
 import struct
 import time
+import logging
+
+#配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 SERVER_PORT = 7966
 SERVER_IP = "192.168.253.20"
@@ -60,16 +64,16 @@ class V2XMessageSend():
                 
                 # 将文件数据附加到buffer
                 buffer[V2X_MESSAGE_HEADER_SIZE:] = message[start:end]
-                print(buffer)
+                logging.info(buffer)
                 # 发送当前片段
                 try:
                     if sock.sendto(buffer, server_addr) < 0:
-                        print("发送失败")
+                        logging.info("发送失败")
                         return
                 except Exception as e:
-                    print(f"发送失败: {e}")
+                    logging.info(f"发送失败: {e}")
                     return
-                print(f"UDP包 {currentFragment}/{totalFragments} 已发送")
+                logging.info(f"UDP包 {currentFragment}/{totalFragments} 已发送")
                 #time.sleep(0.1)  # 等待一小段时间，可能有助于处理网络拥塞
 
 

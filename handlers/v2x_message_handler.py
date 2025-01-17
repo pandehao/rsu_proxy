@@ -94,9 +94,29 @@ class V2XMessageHandler(BaseHTTPRequestHandler):
 
             v2xVehicleID = 0x30A2105E
             # 发送消息
-            V2XMessageSend.message_send(message, FUNCTION_CURL, v2xVehicleID)
+            V2XMessageSend.message_send(self,message = message, _message_type = FUNCTION_CURL, _v2xVehicleID = v2xVehicleID)
         else:
             logging.warning("Missing parameters or unsupported function_name")
+    
+    
+class V2XMessageListen():
+    def listen_v2x_port(server_class=HTTPServer, handler_class=V2XMessageHandler, port=7967):
+        """
+        启动 HTTP 服务器。
+
+        :param server_class: HTTPServer 类
+        :param handler_class: 处理请求的类
+        :param port: 服务器端口
+        """
+        server_address = ('', port)
+        httpd = server_class(server_address, handler_class)
+        logging.info(f"Server running on port {port}...")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        httpd.server_close()
+        logging.info("Server stopped.")
 
 class V2XMessageSendTest():
     """
@@ -110,5 +130,5 @@ class V2XMessageSendTest():
         message = json.dumps(function_curl_plate_ocr).encode('ascii')
         while True:
             v2xVehicleID = 0x30A2105E
-            self.sender.message_send(message, FUNCTION_CURL, v2xVehicleID)
+            self.sender.message_send(message = message, _message_type = FUNCTION_CURL, _v2xVehicleID = v2xVehicleID)
             time.sleep(5)  # 每5秒发送一次测试消息

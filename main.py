@@ -1,9 +1,14 @@
 # rsu_proxy/main.py
 
 import os
+import logging
 from servers.v2x_server import V2XServer
 from servers.http_server import HTTPServerThread
 from utils.directory_utils import ensure_safe_directory
+
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def start_v2x_server(host='192.168.253.28', port=7966):
     """
@@ -34,16 +39,16 @@ def main():
     # 启动 HTTP 服务器
     http_server = start_http_server()
 
-    print("所有服务器已启动。")
+    logging.info(f"所有服务器已启动。")
 
     try:
         # 主线程保持运行，等待服务器线程
         v2x_server.join()
         http_server.join()
     except KeyboardInterrupt:
-        print("\n正在关闭服务器...")
+        logging.info(f"\n正在关闭服务器...")
         http_server.shutdown_server()
-        print("服务器已关闭。")
+        logging.info(f"服务器已关闭。")
 
 if __name__ == "__main__":
     main()
